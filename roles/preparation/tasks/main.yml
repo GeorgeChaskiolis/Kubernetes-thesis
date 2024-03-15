@@ -1,0 +1,101 @@
+---
+# - name: Install Dependent Ubuntu Packages
+#   when: ansible_distribution in ['Ubuntu']
+#   ansible.builtin.apt:
+#     name: policycoreutils  # Used by install script to restore SELinux context
+#     update_cache: true
+- name: Reset ufw and allow everything
+  community.general.ufw:
+    state: reset
+    policy: allow
+
+- name: Allow all access to port 6443
+  ufw:
+    rule: allow
+    port: 6443
+    proto: tcp
+
+- name: Enable IPv4 forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    state: present
+    reload: true
+
+- name: Enable IPv6 forwarding
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: "1"
+    state: present
+    reload: true
+  when: ansible_all_ipv6_addresses
+
+- name: Populate service facts
+  ansible.builtin.service_facts:
+
+- name: Allow UFW Exceptions
+  block:
+    - name: Get ufw status
+      ansible.builtin.command:
+        cmd: ufw status
+      changed_when: false
+      register: ufw_status
+
+    - name: If ufw enabled, open etcd ports
+      community.general.ufw:
+        rule: allow
+        port: "2379:2381"
+        proto: tcp
+
+    - name: If ufw enabled, allow default CIDRs
+      community.general.ufw:
+        rule: allow
+        src: '{{ item }}'
+      loop: "{{ (cluster_cidr + ',' + service_cidr) | split(',') }}"
+
+- name: Check for Apparmor existence
+  ansible.builtin.stat:
+    path: /sys/module/apparmor/parameters/enabled
+  register: apparmor_enabled
+
+- name: Check if Apparmor is enabled
+  when: apparmor_enabled.stat.exists
+  ansible.builtin.command: cat /sys/module/apparmor/parameters/enabled
+  register: apparmor_status
+  changed_when: false
+
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Setup alternative K3s directory
+  when:
+    - k3s_server_location is defined
+    - k3s_server_location != "/etc/rancher/k3s"
+  block:
+    - name: Make rancher directory
+      ansible.builtin.file:
+        path: "/var/lib/rancher"
+        mode: 0755
+        state: directory
+    - name: Create symlink
+      ansible.builtin.file:
+        dest: /etc/rancher/k3s
+        src: "{{ k3s_server_location }}"
+        force: true
+        state: link
+
+- name: Setup extra manifests
+  when: extra_manifests is defined
+  block:
+    - name: Make manifests directory
+      ansible.builtin.file:
+        path: "/etc/rancher/k3s/server/manifests"
+        mode: 0700
+        state: directory
+    - name: Copy manifests
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/etc/rancher/k3s/server/manifests"
+        mode: 0600
+      loop: "{{ extra_manifests }}"

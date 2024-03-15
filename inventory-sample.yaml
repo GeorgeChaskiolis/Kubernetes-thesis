@@ -1,0 +1,30 @@
+k3s_cluster:
+  children:
+    server:
+      hosts:
+        master.test.com:  # Corrected: Remove variables that directly follow this line
+          ansible_host: 192.168.100.7
+          ansible_user: george
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          ansible_ssh_pass: root1234
+    agent:
+      hosts:
+        worker1.test.com:
+          ansible_host: 192.168.100.5
+          ansible_user: george
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          ansible_ssh_pass: root1234
+        worker2.test.com:
+          ansible_host: 192.168.100.6
+          ansible_user: george
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          ansible_ssh_pass: root1234
+
+  vars:
+    ansible_port: 22
+    ansible_user: debian
+    k3s_version: v1.29.2+k3s1
+    token: "mytoken"  # Use ansible vault if you want to keep it secret
+    api_endpoint: "{{ hostvars[groups['server'][0]]['ansible_host'] | default(groups['server'][0]) }}"
+    extra_server_args: ""
+    extra_agent_args: ""
