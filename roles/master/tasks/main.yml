@@ -26,7 +26,7 @@
 
     - name: Download K3s binary
       ansible.builtin.command:
-        cmd: /usr/local/bin/k3s-install.sh
+        cmd: /usr/local/bin/k3s-install.sh --flannel-backend none --disable-network-policy
       environment:
         INSTALL_K3S_SKIP_START: "true"
         INSTALL_K3S_VERSION: "{{ k3s_version }}"
@@ -103,42 +103,92 @@
     - name: Apply K3S kubeconfig to control node
       when: kubectl_installed.rc == 0
       block:
-        - name: Copy kubeconfig to control node
-          ansible.builtin.fetch:
-            src: /etc/rancher/k3s/k3s.yaml
-            dest: "{{ kubeconfig }}"
-            flat: true
+      - name: Copy kubeconfig to control node
+        ansible.builtin.fetch:
+          src: /etc/rancher/k3s/k3s.yaml
+          dest: "{{ kubeconfig }}"
+          flat: true
 
-        - name: Change server address in kubeconfig on control node
-          ansible.builtin.shell: |
-            KUBECONFIG={{ kubeconfig }} kubectl config set-cluster default --server=https://{{ api_endpoint }}:{{ api_port }}
-          # delegate_to: 127.0.0.1
-          become: false
-          register: csa_result
-          changed_when:
-            - csa_result.rc == 0
+      - name: Change server address in kubeconfig on control node
+        ansible.builtin.shell: |
+          KUBECONFIG={{ kubeconfig }} kubectl config set-cluster default --server=https://{{ api_endpoint }}:{{ api_port }}
+        # delegate_to: 127.0.0.1
+        become: false
+        register: csa_result
+        changed_when:
+          - csa_result.rc == 0
 
-        - name: Setup kubeconfig k3s-ansible context on control node
-          when: kubeconfig != "~/.kube/config"
-          ansible.builtin.replace:
-            path: "{{ kubeconfig }}"
-            regexp: 'name: default'
-            replace: 'name: k3s-ansible'
-          # delegate_to: 127.0.0.1
-          become: false
+      - name: Setup kubeconfig k3s-ansible context on control node
+        when: kubeconfig != "~/.kube/config"
+        ansible.builtin.replace:
+          path: "{{ kubeconfig }}"
+          regexp: 'name: default'
+          replace: 'name: k3s-ansible'
+        # delegate_to: 127.0.0.1
+        become: false
 
-        - name: Merge with any existing kubeconfig on control node
-          when: kubeconfig != "~/.kube/config"
-          ansible.builtin.shell: |
-            TFILE=$(mktemp)
-            KUBECONFIG={{ kubeconfig }} kubectl config set-context k3s-ansible --user=k3s-ansible --cluster=k3s-ansible
-            KUBECONFIG={{ kubeconfig }} kubectl config view --flatten > ${TFILE}
-            mv ${TFILE} {{ kubeconfig }}
-          # delegate_to: 127.0.0.1
-          become: false
-          register: mv_result
-          changed_when:
-            - mv_result.rc == 0
+      - name: Merge with any existing kubeconfig on control node
+        when: kubeconfig != "~/.kube/config"
+        ansible.builtin.shell: |
+          TFILE=$(mktemp)
+          KUBECONFIG={{ kubeconfig }} kubectl config set-context k3s-ansible --user=k3s-ansible --cluster=k3s-ansible
+          KUBECONFIG={{ kubeconfig }} kubectl config view --flatten > ${TFILE}
+          mv ${TFILE} {{ kubeconfig }}
+        # delegate_to: 127.0.0.1
+        become: false
+        register: mv_result
+        changed_when:
+          - mv_result.rc == 0
+
+    # - name: Install and start Calico
+    #   block:
+    #   - name: Ensure the Calico manifests directory exists
+    #     file:
+    #       path: "{{ ansible_env.HOME }}/manifests/calico"
+    #       state: directory
+    #       mode: '0755'
+    #   - name: Download Calico Operator
+    #     get_url:
+    #       url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/tigera-operator.yaml"
+    #       dest: "{{ ansible_env.HOME }}/manifests/calico/tigera-operator.yaml"
+    #       mode: '0755'
+
+    #   - name: Install Calico Operator
+    #     ansible.builtin.command: kubectl create -f {{ ansible_env.HOME }}/manifests/calico/tigera-operator.yaml
+
+    #   - name: Download the custom resources necessary to configure Calico
+    #     get_url:
+    #       url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/custom-resources.yaml"
+    #       dest: "{{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml"
+    #       mode: '0755'
+
+    #   - name: Create the manifest to install Calico
+    #     ansible.builtin.command: kubectl create -f {{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml
+
+    #   - name: Wait for Calico pods become created
+    #     shell: "kubectl get pods -n calico-system --output=jsonpath='{.items[*].metadata.name}'"
+    #     register: control_plane_pods_created
+    #     until: item in control_plane_pods_created.stdout
+    #     retries: 10
+    #     delay: 30
+    #     with_items:
+    #       - etcd
+    #       - kube-apiserver
+    #       - kube-controller-manager
+    #       - kube-scheduler
+
+    #   - name: Wait for Calico control-plane pods become ready
+    #     shell: "kubectl wait --namespace=calico-system --for=condition=Ready pods --selector tier=control-plane --timeout=600s"
+    #     register: control_plane_pods_ready
+
+    #   - debug: var=control_plane_pods_ready.stdout_lines
+
+    #   - name: Remove taints from all pods so I can schedule on them
+    #     shell: "kubectl taint nodes --all node-role.kubernetes.io/control-plane-"
+    #   - name: Remove taints from all pods so I can schedule on them
+    #     shell: "kubectl taint nodes --all node-role.kubernetes.io/master-"
+
+    
 
 - name: Start other server if any and verify status
   when:
@@ -210,3 +260,46 @@
         path: ~{{ ansible_user }}/.bashrc
         regexp: '\.\s+<\(kubectl completion bash\)'
         line: ". <(kubectl completion bash)  # Added by k3s-ansible"
+
+- name: Install and start Calico
+  block:
+  - name: Ensure the Calico manifests directory exists
+    file:
+      path: "{{ ansible_env.HOME }}/manifests/calico"
+      state: directory
+      mode: '0755'
+  - name: Download Calico Operator
+    get_url:
+      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/tigera-operator.yaml"
+      dest: "{{ ansible_env.HOME }}/manifests/calico/tigera-operator.yaml"
+      mode: '0755'
+
+  - name: Install Calico Operator
+    ansible.builtin.command: kubectl create -f {{ ansible_env.HOME }}/manifests/calico/tigera-operator.yaml
+
+  - name: Download the custom resources necessary to configure Calico
+    get_url:
+      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/custom-resources.yaml"
+      dest: "{{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml"
+      mode: '0755'
+
+  - name: Create the manifest to install Calico
+    ansible.builtin.command: kubectl create -f {{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml
+
+  # - name: Wait for Calico pods become created
+  #   shell: "kubectl get pods -n calico-system --output=jsonpath='{.items[*].metadata.name}'"
+  #   register: control_plane_pods_created
+  #   until: item in control_plane_pods_created.stdout
+  #   retries: 10
+  #   delay: 30
+  #   with_items:
+  #     - etcd
+  #     - kube-apiserver
+  #     - kube-controller-manager
+  #     - kube-scheduler
+
+  # - name: Wait for Calico control-plane pods become ready
+  #   shell: "kubectl wait --namespace=calico-system --for=condition=Ready pods --selector tier=control-plane --timeout=600s"
+  #   register: control_plane_pods_ready
+
+  # - debug: var=control_plane_pods_ready.stdout_lines

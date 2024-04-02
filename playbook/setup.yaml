@@ -17,3 +17,11 @@
   become: true
   roles:
     - role: worker
+
+# - name: Setup Prometheus
+#   hosts: server
+#   become: true
+#   roles:
+#     - role: vault-load-config
+#     - role: ansible-kubernetes-modules
+#     - role: prometheus-operator

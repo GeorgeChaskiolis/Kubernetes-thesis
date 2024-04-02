@@ -1,0 +1,5 @@
+- name: Delete K3S Cluster
+  hosts: server
+  become: true
+  roles:
+    - role: destroy
