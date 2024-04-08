@@ -1,0 +1,5 @@
+- name: Application Deploy
+  hosts: server
+  become: true
+  roles:
+    - role: application-deploy
