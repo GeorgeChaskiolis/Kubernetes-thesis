@@ -1,0 +1,70 @@
+---
+- name: Create the Node Exporter group
+  ansible.builtin.group:
+    name: "{{ prometheus_node_exporter_service_group }}"
+    state: present
+    system: true
+
+- name: Create the Node Exporter user
+  ansible.builtin.user:
+    name: "{{ prometheus_node_exporter_service_username }}"
+    groups: "{{ prometheus_node_exporter_service_group }}"
+    append: true
+    shell: /bin/bash
+  when: prometheus_node_exporter_manage_user
+
+#
+# Install Prometheus Node Exporter
+#
+- name: Check if the version of Node Exporter already exists
+  ansible.builtin.stat:
+    path: "/opt/node_exporter-{{ prometheus_node_exporter_version }}.linux-amd64"
+  register: prometheus_node_exporter_install_path
+
+- name: Download Node Exporter
+  ansible.builtin.get_url:
+    url: "{{ prometheus_node_exporter_download_url }}"
+    dest: "/tmp/node_exporter-{{ prometheus_node_exporter_version }}.tar.gz"
+    mode: '0440'
+  when: not prometheus_node_exporter_install_path.stat.exists
+
+- name: Extract Node Exporter into the install directory
+  ansible.builtin.unarchive:
+    src: "/tmp/node_exporter-{{ prometheus_node_exporter_version }}.tar.gz"
+    dest: "/opt/"
+    copy: false
+    owner: "{{ prometheus_node_exporter_service_username }}"
+    group: "{{ prometheus_node_exporter_service_group }}"
+  when: not prometheus_node_exporter_install_path.stat.exists
+
+- name: Create a symlink for /opt/node_exporter
+  ansible.builtin.file:
+    src: "/opt/node_exporter-{{ prometheus_node_exporter_version }}.linux-amd64"
+    dest: /opt/node_exporter
+    owner: "{{ prometheus_node_exporter_service_username }}"
+    group: "{{ prometheus_node_exporter_service_group }}"
+    state: link
+  when: not prometheus_node_exporter_install_path.stat.exists
+
+- name: Copy the Node Exporter systemd service file
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - Reload systemd
+    - Restart node_exporter
+
+- name: Enable Port for Node Exporter
+  community.general.ufw:
+    rule: allow
+    port: 9100
+    proto: tcp
+
+- name: Ensure Node Exporter is started and enabled on boot
+  ansible.builtin.service:
+    name: node_exporter
+    state: started
+    enabled: true

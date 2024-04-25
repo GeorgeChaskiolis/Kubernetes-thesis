@@ -1,0 +1,21 @@
+- name: Setup node exporter
+  hosts: all
+  become: true
+
+  vars:
+    prometheus_node_exporter_enabled_collectors:
+      - logind
+    prometheus_node_exporter_disabled_collectors:
+      - netstat
+
+  roles:
+    - role: node_exporter
+
+  tags:
+    - node-exporter
+
+- name: Setup Prometheus
+  hosts: localhost
+  become: true
+  roles:
+  - prometheus_deploy

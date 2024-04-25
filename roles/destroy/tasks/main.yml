@@ -12,3 +12,8 @@
 - name: Include conditional tasks if k3s is installed
   ansible.builtin.command: /usr/local/bin/k3s-uninstall.sh
   when: k3s_version_result.rc == 0
+
+- name: Remove yaml folders
+  ansible.builtin.file:
+    path: /etc/rancher/k3s/server/manifests/
+    state: absent

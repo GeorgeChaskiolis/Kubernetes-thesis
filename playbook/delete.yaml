@@ -1,5 +1,8 @@
 - name: Delete K3S Cluster
   hosts: server
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
   become: true
   roles:
     - role: destroy
+    
