@@ -12,6 +12,11 @@ prometheus_var_config:
       env: '{{ prometheus_env }}'
   scrape_configs:
     - job_name: prometheus
-      scrape_interval: 5m
+      scrape_interval: 30s
       static_configs:
         - targets: ['{{ inventory_hostname }}:9090']
+
+    - job_name: node-exporter
+      scrape_interval: 30s
+      static_configs:
+        - targets: ['{{ inventory_hostname }}:90100']

@@ -19,3 +19,4 @@
   become: true
   roles:
   - prometheus_deploy
+  - grafana
