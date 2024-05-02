@@ -1,0 +1,37 @@
+all:
+  children:
+    k3s_cluster:
+      children:
+        server:
+          hosts:
+            master.test.com:
+              ansible_host: 192.168.100.7
+              ansible_user: george
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_ssh_pass: root1234
+        agent:
+          hosts:
+            worker1.test.com:
+              ansible_host: 192.168.100.5
+              ansible_user: george
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_ssh_pass: root1234
+            worker2.test.com:
+              ansible_host: 192.168.100.6
+              ansible_user: george
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_ssh_pass: root1234
+      vars:
+        api_port: 6443
+        k3s_version: v1.29.2+k3s1
+        systemd_dir: /etc/systemd/system
+        token: "mytoken"  # Use ansible vault if you want to keep it secret
+        api_endpoint: "{{ hostvars[groups['server'][0]]['ansible_host'] | default(groups['server'][0]) }}"
+        extra_server_args: ""
+        extra_agent_args: ""
+
+    # This is where you add localhost
+    localhost:
+      hosts:
+        localhost:
+          ansible_connection: local
