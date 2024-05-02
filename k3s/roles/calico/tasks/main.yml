@@ -1,0 +1,38 @@
+---
+# tasks file for calico
+- name: Install and start Calico
+  block:
+  - name: Ensure the Calico manifests directory exists
+    file:
+      path: "{{ ansible_env.HOME }}/manifests/calico"
+      state: directory
+      mode: '0755'
+  - name: Find and delete all files inside a specific folder
+    find:
+      paths: "{{ ansible_env.HOME }}/manifests/calico"
+      file_type: file
+    register: found_files
+
+  - name: Delete found files
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    loop: "{{ found_files.files }}"
+
+  - name: Download Calico Operator
+    get_url:
+      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/tigera-operator.yaml"
+      dest: "{{ ansible_env.HOME }}/manifests/calico/tigera-operator.yaml"
+      mode: '0755'
+
+  - name: Install Calico Operator
+    ansible.builtin.command: kubectl create -f {{ ansible_env.HOME }}/manifests/calico/tigera-operator.yaml
+
+  - name: Download the custom resources necessary to configure Calico
+    get_url:
+      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/custom-resources.yaml"
+      dest: "{{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml"
+      mode: '0755'
+
+  - name: Create the manifest to install Calico
+    ansible.builtin.command: kubectl create -f {{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml
