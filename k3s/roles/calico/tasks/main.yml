@@ -36,3 +36,12 @@
 
   - name: Create the manifest to install Calico
     ansible.builtin.command: kubectl create -f {{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml
+
+
+- name: Wait for all pods to be ready
+  shell: kubectl wait --for=condition=ready pod --all --timeout=600s --all-namespaces
+  register: result
+  until: result is succeeded
+  retries: 60 
+  delay: 5
+  ignore_errors: true

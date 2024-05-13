@@ -29,9 +29,3 @@ all:
         api_endpoint: "{{ hostvars[groups['server'][0]]['ansible_host'] | default(groups['server'][0]) }}"
         extra_server_args: ""
         extra_agent_args: ""
-
-    # This is where you add localhost
-    localhost:
-      hosts:
-        localhost:
-          ansible_connection: local
