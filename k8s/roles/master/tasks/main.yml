@@ -1,0 +1,57 @@
+---
+- name: Ensure the /etc/kubernetes directory exists
+  file:
+    path: /etc/kubernetes
+    state: directory
+    mode: '0755'
+
+- name: Copy kubeadm-config.yaml template to /etc/kubernetes
+  template:
+    src: kubeadm-config.yaml.j2
+    dest: /etc/kubernetes/kubeadm-config.yaml
+    mode: '0644'
+
+- name: init cluster
+  ansible.builtin.command: kubeadm init --pod-network-cidr={{ cluster_cidr }} --service-cidr={{ service_cidr }} --node-name k8s-control
+
+- name: Generate join token
+  shell: kubeadm token create --print-join-command
+  register: kubeadm_join_cmd
+
+- set_fact:
+    kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
+
+- debug: var=kubeadm_join
+
+- name: Store join command
+  action: copy content="{{ kubeadm_join }}" dest="/etc/kubernetes/kubeadm-join.command"
+
+- name: fetch join command from master to control
+  hosts: source-servers
+  fetch:
+    src: /etc/kubernetes/kubeadm-join.command
+    dest: /tmp
+    flat: yes
+
+# - name: Setup MEtallb
+#   block:
+#   - name: Apply default Metallb naemspace
+#     ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.4/config/manifests/metallb-native.yaml
+#   - name: Copy configmap
+#     ansible.builtin.template:
+#       src: "metallb_configmap.yaml.j2"
+#       dest: "{{ systemd_dir }}/metallb_configmap.yaml"
+#       owner: root
+#       group: root
+#       mode: 0644
+#   - name: Copy service
+#     ansible.builtin.template:
+#       src: "metallb_service.yaml.j2"
+#       dest: "{{ systemd_dir }}/metallb_service.yaml"
+#       owner: root
+#       group: root
+#       mode: 0644
+#   - name: Apply configmap
+#     ansible.builtin.command: kubectl apply -f {{ systemd_dir }}/metallb_configmap.yaml
+#   - name: Apply service
+#     ansible.builtin.command: kubectl apply -f {{ systemd_dir }}/metallb_service.yaml

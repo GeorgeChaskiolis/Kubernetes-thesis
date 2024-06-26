@@ -1,0 +1,19 @@
+---
+- name: Check if k3s is installed and get its version
+  ansible.builtin.command: k3s --version
+  register: k3s_version_result
+  ignore_errors: true
+
+- name: Debug print k3s version
+  debug:
+    msg: "k3s version: {{ k3s_version_result.stdout }}"
+  when: k3s_version_result.rc == 0
+
+- name: Include conditional tasks if k3s is installed
+  ansible.builtin.command: /usr/local/bin/k3s-uninstall.sh
+  when: k3s_version_result.rc == 0
+
+- name: Remove yaml folders
+  ansible.builtin.file:
+    path: /etc/rancher/k3s/server/manifests/
+    state: absent

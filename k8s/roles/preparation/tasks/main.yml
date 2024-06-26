@@ -1,0 +1,165 @@
+---
+- name: Reset ufw and allow everything
+  community.general.ufw:
+    state: reset
+    policy: allow
+
+- name: Allow all access to port 6443
+  ufw:
+    rule: allow
+    port: 6443
+    proto: tcp
+
+- name: Enable IPv4 forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    state: present
+    reload: true
+
+- name: Enable IPv6 forwarding
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: "1"
+    state: present
+    reload: true
+  when: ansible_all_ipv6_addresses
+
+- name: Populate service facts
+  ansible.builtin.service_facts:
+
+- name: Allow UFW Exceptions
+  block:
+    - name: Get ufw status
+      ansible.builtin.command:
+        cmd: ufw status
+      changed_when: false
+      register: ufw_status
+
+    - name: If ufw enabled, open etcd ports
+      community.general.ufw:
+        rule: allow
+        port: "2379:2381"
+        proto: tcp
+
+    - name: If ufw enabled, allow default CIDRs
+      community.general.ufw:
+        rule: allow
+        src: '{{ item }}'
+      loop: "{{ (cluster_cidr + ',' + service_cidr) | split(',') }}"
+
+- name: Check for Apparmor existence
+  ansible.builtin.stat:
+    path: /sys/module/apparmor/parameters/enabled
+  register: apparmor_enabled
+
+- name: Check if Apparmor is enabled
+  when: apparmor_enabled.stat.exists
+  ansible.builtin.command: cat /sys/module/apparmor/parameters/enabled
+  register: apparmor_status
+  changed_when: false
+
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Create containerd config file
+  file:
+    path: "/etc/modules-load.d/containerd.conf"
+    state: "touch"
+
+- name: Add conf for containerd
+  blockinfile:
+    path: "/etc/modules-load.d/containerd.conf"
+    block: |
+          overlay
+          br_netfilter
+
+- name: modprobe
+  shell: |
+          sudo modprobe overlay
+          sudo modprobe br_netfilter
+
+
+- name: Set system configurations for Kubernetes networking
+  file:
+    path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+    state: "touch"
+
+- name: Add conf for containerd
+  blockinfile:
+    path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+    block: |
+          net.bridge.bridge-nf-call-iptables = 1
+          net.ipv4.ip_forward = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+
+- name: Apply new settings
+  command: sudo sysctl --system
+
+- name: setup docker repository
+  block:
+    - name: get docker gpg key
+      become: true
+      shell:
+        cmd: curl https://download.docker.com/linux/ubuntu/gpg > /usr/share/keyrings/docker-archive-keyring-armored.gpg
+    - name: CMD - process docker key
+      become: true
+      shell:
+        cmd: cat /usr/share/keyrings/docker-archive-keyring-armored.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    - name: configure docker apt source
+      become: true
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+
+- name: install containerd (specific version)
+  shell: |
+          # from here https://www.linuxtechi.com/install-kubernetes-on-ubuntu-22-04/
+          sudo apt -y update
+          sudo apt install -y containerd.io={{ containerdversion }}
+          sudo containerd config default | sudo tee /etc/containerd/config.toml >/dev/null 2>&1
+          sudo sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
+          sudo systemctl restart containerd
+
+- name: restart containerd (specific version)
+  shell: |
+         sudo systemctl daemon-reload
+         sudo systemctl restart containerd
+
+- name: disable swap
+  shell: |
+          sudo swapoff -a
+          sudo sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
+
+- name: install and configure dependencies
+  apt:
+    update_cache: yes
+    name:
+      - apt-transport-https
+      - curl
+      - gnupg-agent
+      - ca-certificates
+      - software-properties-common
+
+- name: Create kubernetes repo file
+  file:
+    path: "/etc/apt/sources.list.d/kubernetes.list"
+    state: "touch"
+
+- name: Add K8s Source
+  blockinfile:
+    path: "/etc/apt/sources.list.d/kubernetes.list"
+    block: |
+          deb https://apt.kubernetes.io/ kubernetes-xenial main
+
+
+- name: install kubernetes
+  shell: |
+          sudo apt-get update
+          sudo apt-get install -y kubelet={{ kubernetesversion }} kubeadm={{ kubernetesversion }} kubectl={{ kubernetesversion }}
+          sudo apt-mark hold cri-tools kubelet kubeadm kubectl
+  register: kubeinstallversion
+  until: "kubeinstallversion is not failed"
+  retries: 10
+  delay: 60

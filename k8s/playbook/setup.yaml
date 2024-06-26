@@ -1,0 +1,28 @@
+---
+- name: Cluster preparation
+  hosts: k3s_cluster
+  gather_facts: true
+  become: true
+  roles:
+    - role: preparation
+
+- name: Setup K3S Master
+  hosts: server
+  become: true
+  roles:
+    - role: master
+    - role: calico
+
+- name: Setup K3S Workers
+  hosts: agent
+  become: true
+  roles:
+    - role: worker
+
+# - name: Setup Prometheus
+#   hosts: server
+#   become: true
+#   roles:
+#     - role: vault-load-config
+#     - role: ansible-kubernetes-modules
+#     - role: prometheus-operator
