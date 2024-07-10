@@ -7,7 +7,7 @@
     - role: preparation
 
 - name: Setup K8S Master
-  hosts: server
+  hosts: master
   become: true
   roles:
     - role: master

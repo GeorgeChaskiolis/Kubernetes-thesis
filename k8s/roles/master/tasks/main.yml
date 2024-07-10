@@ -11,27 +11,40 @@
     dest: /etc/kubernetes/kubeadm-config.yaml
     mode: '0644'
 
-- name: init cluster
-  ansible.builtin.command: kubeadm init --pod-network-cidr={{ cluster_cidr }} --service-cidr={{ service_cidr }} --node-name k8s-control
+- name: Init cluster
+  command: kubeadm init --pod-network-cidr={{ cluster_cidr }} --service-cidr={{ service_cidr }} --node-name k8s-control
 
-- name: Generate join token
-  shell: kubeadm token create --print-join-command
-  register: kubeadm_join_cmd
+- name: Generate and store Kubernetes join command
+  block:
+    - name: Generate join token
+      shell: kubeadm token create --print-join-command
+      register: kubeadm_join_cmd
 
-- set_fact:
-    kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
+    - name: Set join command as a fact
+      set_fact:
+        kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
 
-- debug: var=kubeadm_join
+    - name: Show join command
+      debug: var=kubeadm_join
 
-- name: Store join command
-  action: copy content="{{ kubeadm_join }}" dest="/etc/kubernetes/kubeadm-join.command"
+    - name: Ensure the directory for kubeadm join command exists
+      file:
+        path: /etc/kubernetes
+        state: directory
+        mode: '0755'
 
-- name: fetch join command from master to control
-  hosts: source-servers
-  fetch:
-    src: /etc/kubernetes/kubeadm-join.command
-    dest: /tmp
-    flat: yes
+    - name: Store join command
+      copy:
+        content: "{{ kubeadm_join }}"
+        dest: /etc/kubernetes/kubeadm-join.command
+        mode: '0644'
+
+    - name: Fetch join command from master to control
+      fetch:
+        src: /etc/kubernetes/kubeadm-join.command
+        dest: /etc/kubernetes/kubeadm-join.command
+        flat: yes
+
 
 # - name: Setup MEtallb
 #   block:
