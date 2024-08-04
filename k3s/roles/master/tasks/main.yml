@@ -23,6 +23,7 @@
         owner: root
         group: root
         mode: 0755
+        force: no
 
     - name: Download K3s binary
       ansible.builtin.command:
@@ -175,7 +176,6 @@
 - name: Setup kubectl for user
   when: user_kubectl
   block:
-
     - name: Create kubectl symlink
       when: lookup('fileglob', '/usr/local/bin/kubectl', errors='warn') | length == 0
       ansible.builtin.file:
@@ -211,25 +211,30 @@
         regexp: '\.\s+<\(kubectl completion bash\)'
         line: ". <(kubectl completion bash)  # Added by k3s-ansible"
 
-# - name: Setup MEtallb
-#   block:
-#   - name: Apply default Metallb naemspace
-#     ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.4/config/manifests/metallb-native.yaml
-#   - name: Copy configmap
-#     ansible.builtin.template:
-#       src: "metallb_configmap.yaml.j2"
-#       dest: "{{ systemd_dir }}/metallb_configmap.yaml"
-#       owner: root
-#       group: root
-#       mode: 0644
-#   - name: Copy service
-#     ansible.builtin.template:
-#       src: "metallb_service.yaml.j2"
-#       dest: "{{ systemd_dir }}/metallb_service.yaml"
-#       owner: root
-#       group: root
-#       mode: 0644
-#   - name: Apply configmap
-#     ansible.builtin.command: kubectl apply -f {{ systemd_dir }}/metallb_configmap.yaml
-#   - name: Apply service
-#     ansible.builtin.command: kubectl apply -f {{ systemd_dir }}/metallb_service.yaml
+- name: Get join command
+  block:
+    - name: Get the K3s join token
+      command: cat /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+
+    - name: Create join command
+      set_fact:
+        join_command: "curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars[inventory_hostname].ansible_host }}:6443 K3S_TOKEN={{ k3s_token.stdout }} sh -"
+
+    - name: Ensure /tmp/k3s directory exists on localhost
+      delegate_to: localhost
+      file:
+        path: /tmp/k3s
+        state: directory
+        mode: '0755'
+
+    - name: Save join command to file on localhost
+      delegate_to: localhost
+      copy:
+        content: "{{ join_command }}"
+        dest: /tmp/k3s/join_command.sh
+        mode: '0755'
+    
+    - name: Debug join command
+      debug:
+        msg: "Join command: {{ join_command }}"

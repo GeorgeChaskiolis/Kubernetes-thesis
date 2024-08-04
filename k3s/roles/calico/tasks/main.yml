@@ -21,7 +21,7 @@
 
   - name: Download Calico Operator
     get_url:
-      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/tigera-operator.yaml"
+      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml"
       dest: "{{ ansible_env.HOME }}/manifests/calico/tigera-operator.yaml"
       mode: '0755'
 
@@ -30,7 +30,7 @@
 
   - name: Download the custom resources necessary to configure Calico
     get_url:
-      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/custom-resources.yaml"
+      url: "https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml"
       dest: "{{ ansible_env.HOME }}/manifests/calico/custom-resources.yaml"
       mode: '0755'
 

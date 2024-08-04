@@ -27,5 +27,5 @@ all:
         systemd_dir: /etc/systemd/system
         token: "mytoken"  # Use ansible vault if you want to keep it secret
         api_endpoint: "{{ hostvars[groups['server'][0]]['ansible_host'] | default(groups['server'][0]) }}"
-        extra_server_args: ""
+        extra_server_args: "--write-kubeconfig-mode 644 --node-ip 192.168.100.5 --disable-network-policy"
         extra_agent_args: ""
