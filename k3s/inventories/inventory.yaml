@@ -8,24 +8,22 @@ all:
               ansible_host: 192.168.100.5
               ansible_user: george
               ansible_ssh_private_key_file: ~/.ssh/id_rsa
-              # ansible_ssh_pass: root1234
         agent:
           hosts:
             worker1.test.com:
               ansible_host: 192.168.100.6
               ansible_user: george
               ansible_ssh_private_key_file: ~/.ssh/id_rsa
-              # ansible_ssh_pass: root1234
             worker2.test.com:
               ansible_host: 192.168.100.7
               ansible_user: george
               ansible_ssh_private_key_file: ~/.ssh/id_rsa
-              # ansible_ssh_pass: root1234
       vars:
         api_port: 6443
         k3s_version: v1.29.2+k3s1
         systemd_dir: /etc/systemd/system
         token: "mytoken"  # Use ansible vault if you want to keep it secret
         api_endpoint: "{{ hostvars[groups['server'][0]]['ansible_host'] | default(groups['server'][0]) }}"
+        k3s_url: "{{ hostvars['master.test.com'].ansible_host }}:{{ api_port }}"
         extra_server_args: "--write-kubeconfig-mode 644 --node-ip 192.168.100.5 --disable-network-policy"
-        extra_agent_args: ""
+        extra_agent_args: "--node-name={{ inventory_hostname }}"
