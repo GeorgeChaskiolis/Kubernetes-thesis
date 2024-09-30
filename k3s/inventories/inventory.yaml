@@ -25,5 +25,7 @@ all:
         token: "mytoken"  # Use ansible vault if you want to keep it secret
         api_endpoint: "{{ hostvars[groups['server'][0]]['ansible_host'] | default(groups['server'][0]) }}"
         k3s_url: "{{ hostvars['master.test.com'].ansible_host }}:{{ api_port }}"
-        extra_server_args: "--write-kubeconfig-mode 644 --node-ip 192.168.100.5 --disable-network-policy"
-        extra_agent_args: "--node-name={{ inventory_hostname }}"
+        # extra_server_args: "--write-kubeconfig-mode 644 --node-ip 192.168.100.5 --disable-network-policy"
+        # extra_agent_args: "--node-name={{ inventory_hostname }}"
+        extra_server_args: "--write-kubeconfig-mode 644 --disable-network-policy"
+        extra_agent_args: ""

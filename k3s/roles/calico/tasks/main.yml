@@ -39,7 +39,7 @@
 
 
 - name: Wait for all pods to be ready
-  shell: kubectl wait --for=condition=ready pod --all --timeout=600s --all-namespaces
+  shell: kubectl wait --for=condition=ready pod --all --all-namespaces
   register: result
   until: result is succeeded
   retries: 60 

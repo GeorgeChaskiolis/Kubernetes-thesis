@@ -99,3 +99,8 @@
         dest: "/etc/rancher/k3s/server/manifests"
         mode: 0600
       loop: "{{ extra_manifests }}"
+
+- name: Install curl
+  apt:
+    name: curl
+    state: present
