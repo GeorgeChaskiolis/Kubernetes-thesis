@@ -1,0 +1,63 @@
+---
+# tasks file for configure_user_group
+
+- name: Add user to microk8s group
+  become: yes
+  command: "usermod -a -G microk8s {{ user }}"
+  changed_when: true
+
+- name: Get user's home directory
+  become: yes
+  command: "getent passwd {{ user }}"
+  register: user_info
+  changed_when: false
+
+- name: Set user's home directory fact
+  set_fact:
+    user_home: "{{ user_info.stdout.split(':')[5] }}"
+
+- name: Create .kube folder for the user
+  become: yes
+  become_user: '{{ user }}'
+  file:
+    path: "{{ user_home }}/.kube"
+    state: directory
+    owner: '{{ user }}'
+    group: '{{ user }}'
+    mode: '0750'
+
+- name: Create kubectl config
+  become: yes
+  shell: "microk8s config > {{ user_home }}/.kube/config"
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Reaffirm permissions on .kube folder
+  become: yes
+  file:
+    path: "{{ user_home }}/.kube"
+    state: directory
+    owner: '{{ user }}'
+    group: '{{ user }}'
+    recurse: yes
+    mode: '0750'
+
+- name: Add Helm repository for the user
+  become: yes
+  become_user: '{{ user }}'
+  shell: "helm repo add {{ item.name }} {{ item.url }}"
+  args:
+    executable: /bin/bash
+  changed_when: true
+  loop: "{{ helm3_repositories }}"
+  when: microk8s_plugins.helm3
+
+- name: Update Helm repositories
+  become: yes
+  become_user: '{{ user }}'
+  shell: "helm repo update"
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: microk8s_plugins.helm3

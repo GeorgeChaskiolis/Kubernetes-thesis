@@ -1,2 +1,104 @@
 ---
-# tasks file for master
+- name: Get current addons state
+  become: yes
+  command:
+    cmd: "{{ microk8s_bin_path }}microk8s.status --format yaml"
+  changed_when: no
+  register: microk8s_status
+  check_mode: no
+
+- name: Parse current state into fact
+  set_fact:
+    microk8s_status: "{{ microk8s_status.stdout | from_yaml }}"
+
+- name: Debug parsed microk8s_status
+  debug:
+    var: microk8s_status
+
+- name: Enable addons
+  become: yes
+  loop: "{{ microk8s_status.addons | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  command:
+    cmd: "{{ microk8s_bin_path }}microk8s.enable {{ item.name }}{% if microk8s_plugins[item.name] != True %}:{{ microk8s_plugins[item.name] }}{% endif %}"
+  when:
+    - item.status == 'disabled'
+    - item.name in microk8s_plugins
+    - microk8s_plugins[item.name]
+
+- name: Disable addons
+  become: yes
+  loop: "{{ microk8s_status.addons | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  command:
+    cmd: "{{ microk8s_bin_path }}microk8s.disable {{ item.name }}"
+  when:
+    - item.status == 'enabled'
+    - item.name in microk8s_plugins
+    - not microk8s_plugins[item.name]
+
+# - name: Run microk8s add-node command
+#   shell: |
+#     microk8s add-node --format short | head -1
+#   register: add_node_output
+
+# - name: Append --worker to the join command
+#   set_fact:
+#     join_command_with_worker: "{{ add_node_output.stdout }} --worker"
+
+# - name: Ensure /tmp/microk8s directory exists on localhost
+#   delegate_to: localhost
+#   file:
+#     path: /tmp/microk8s
+#     state: directory
+#     mode: '0755'
+
+# - name: Save join command to file on localhost
+#   delegate_to: localhost
+#   copy:
+#     content: "#!/bin/bash\n{{ join_command_with_worker }}"
+#     dest: /tmp/microk8s/join_command.sh
+#     mode: '0755'
+
+# - name: Debug join command
+#   debug:
+#     msg: "Join command with --worker: {{ join_command_with_worker }}"
+
+- block:
+    - name: Run microk8s add-node command for each machine in the 'agent' group
+      shell: |
+        microk8s add-node --format short | head -1
+      register: add_node_output
+      with_items: "{{ groups['agent'] }}"
+
+    - name: Append --worker to the join command for each agent
+      set_fact:
+        join_command_with_worker: "{{ item.stdout }} --worker"
+      loop: "{{ add_node_output.results }}"
+
+    - name: Create directory for join commands if not exists
+      delegate_to: localhost
+      become: true
+      file:
+        path: /tmp/microk8s
+        state: directory
+        mode: '0755'
+
+    - name: Save the join command with --worker to a file for each agent
+      delegate_to: localhost
+      copy:
+        content: "{{ item.stdout }} --worker"
+        dest: "/tmp/microk8s/join_command_{{ item.item }}.sh"
+        mode: '0755'
+      loop: "{{ add_node_output.results }}"
+
+    - name: Debug the paths and contents of the created files
+      delegate_to: localhost
+      debug:
+        msg: |
+          Created join command file: /tmp/microk8s/join_command_{{ item.item }}.sh
+          Contents:
+          {{ item.stdout }} --worker
+      loop: "{{ add_node_output.results }}"

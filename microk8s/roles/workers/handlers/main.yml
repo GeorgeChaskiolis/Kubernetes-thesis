@@ -1,5 +1,2 @@
 ---
 # handlers file for workers
-- name: Refresh certs
-  become: true
-  command: microk8s refresh-certs

@@ -1,0 +1,11 @@
+---
+# tasks file for destroy
+- name: Reset microk8s
+  become: yes
+  command:
+    cmd: sudo microk8s reset
+
+- name: Remove microk8s
+  become: yes
+  command:
+    cmd: sudo snap remove microk8s

@@ -1,0 +1,64 @@
+# Global variables for all roles
+
+# version management
+microk8s_version: "1.27/stable"
+microk8s_disable_snap_autoupdate: false
+
+# plugin configuration
+microk8s_dns_resolvers: 8.8.8.8,8.8.4.4
+registry_size: 20Gi
+microk8s_plugins:
+  dns: "{{ microk8s_dns_resolvers }}"     
+  host-access: true                       
+  ingress: true                           
+  metrics-server: true                    
+  rbac: true                              
+  hostpath-storage: true                  
+  registry: "size={{ registry_size }}"    
+  dashboard: true                         
+  ambassador: false                       
+  cilium: false                           
+  fluentd: false                          
+  gpu: false                              
+  helm: false                             
+  helm3: true                             
+  istio: false                            
+  jaeger: false                           
+  knative: false                          
+  kubeflow: false                         
+  linkerd: false                          
+  metallb: false                           
+  multus: false                           
+  prometheus: false                       
+  traefik: false                          
+  portainer: false                        
+  keda: false                             
+  kata: false                             
+  openebs: false                          
+  openfaas: false                         
+
+helm3_repositories:
+  - name: stable
+    url: https://charts.helm.sh/stable
+
+# users to make members of microk8s group
+users:
+  - george
+
+# enable high-availability?
+microk8s_enable_HA: false
+
+# hostgroup whose members will form high-availability cluster
+microk8s_group_HA: "server"
+
+# regex to select IP address for joining nodes in HA setup
+microk8s_ip_regex_HA: "192.168.100.5"
+
+# hostgroup whose members will act as worker nodes only (no control-plane components run here)
+microk8s_group_WORKERS: "agent"
+
+# option to add workers hostgroup members to hostfile
+add_workers_to_hostfile: false
+
+# when /snap/bin is not in the PATH
+microk8s_bin_path: ""

@@ -1,2 +1,43 @@
 ---
-# tasks file for workers
+# - name: Ensure /tmp/microk8s directory exists on worker
+#   file:
+#     path: /tmp/microk8s
+#     state: directory
+#     mode: '0755'
+
+# - name: Copy join command from localhost to worker
+#   copy:
+#     src: /tmp/microk8s/join_command.sh
+#     dest: /tmp/microk8s/join_command.sh
+#     mode: '0755'
+
+# - name: Ensure correct shebang line
+#   lineinfile:
+#     path: /tmp/microk8s/join_command.sh
+#     line: "#!/bin/sh"
+#     insertafter: BOF
+
+
+# - name: Execute join command on worker
+#   command: /tmp/microk8s/join_command.sh
+
+- name: Ensure /tmp/microk8s directory exists on worker
+  file:
+    path: /tmp/microk8s
+    state: directory
+    mode: '0755'
+
+- name: Copy the correct join command from localhost to the worker
+  copy:
+    src: "/tmp/microk8s/join_command_{{ inventory_hostname }}.sh"
+    dest: /tmp/microk8s/join_command.sh
+    mode: '0755'
+
+- name: Ensure correct shebang line in the join command script
+  lineinfile:
+    path: /tmp/microk8s/join_command.sh
+    line: "#!/bin/sh"
+    insertafter: BOF
+
+- name: Execute the join command on the worker
+  command: /tmp/microk8s/join_command.sh

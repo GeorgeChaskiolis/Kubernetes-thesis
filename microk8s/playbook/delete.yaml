@@ -1,0 +1,8 @@
+- name: Delete microk8s Cluster
+  hosts: all
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  become: true
+  roles:
+    - role: destroy
+    

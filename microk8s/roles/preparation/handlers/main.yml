@@ -1,5 +1,0 @@
----
-# handlers file for preparation
-- name: Refresh certs
-  become: true
-  command: microk8s refresh-certs
