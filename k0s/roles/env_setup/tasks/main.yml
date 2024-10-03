@@ -4,8 +4,3 @@
   file:
     path: /etc/systemd/system/k0scontroller.service.d
     state: directory
-
-- name: Ensure systemd drop-in unit for custom Env exists
-  template:
-    src: env.conf.j2
-    dest: /etc/systemd/system/k0scontroller.service.d/env.conf
