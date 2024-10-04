@@ -9,11 +9,11 @@ all:
         worker2.test.com:
   hosts:
     master.test.com:
-      ansible_host: 192.168.100.7
-    worker1.test.com:
       ansible_host: 192.168.100.5
-    worker2.test.com:
+    worker1.test.com:
       ansible_host: 192.168.100.6
+    worker2.test.com:
+      ansible_host: 192.168.100.7
   vars:
     ansible_user: george
     ansible_ssh_private_key_file: ~/.ssh/id_rsa
