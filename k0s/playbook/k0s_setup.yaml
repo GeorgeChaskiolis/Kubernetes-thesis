@@ -32,3 +32,10 @@
   roles:
     - role: k0s/worker
       tags: worker
+
+- hosts: initial_controller
+  gather_facts: yes
+  become: yes
+  name: Configure metallb on initial controller
+  roles:
+    - role: metalLB

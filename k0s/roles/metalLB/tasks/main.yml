@@ -1,0 +1,37 @@
+---
+# tasks file for metalLB
+- name: Install and start metalLB
+  block:
+  - name: Ensure the metalLB manifests directory exists
+    file:
+      path: "{{ ansible_env.HOME }}/manifests/metalLB"
+      state: directory
+      mode: '0755'
+  - name: Find and delete all files inside a specific folder
+    find:
+      paths: "{{ ansible_env.HOME }}/manifests/metalLB"
+      file_type: file
+    register: found_files
+
+  - name: Delete found files
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    loop: "{{ found_files.files }}"
+
+  - name: Download metalLB Operator
+    get_url:
+      url: "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-frr.yaml"
+      dest: "{{ ansible_env.HOME }}/manifests/metalLB/metallb.yaml"
+      mode: '0755'
+
+  - name: Install metalLB Operator
+    ansible.builtin.command: k0s kubectl create -f {{ ansible_env.HOME }}/manifests/metalLB/metallb.yaml
+
+- name: Wait for all pods to be ready
+  shell: k0s kubectl wait --for=condition=ready pod --all --all-namespaces
+  register: result
+  until: result is succeeded
+  retries: 60 
+  delay: 5
+  ignore_errors: true
