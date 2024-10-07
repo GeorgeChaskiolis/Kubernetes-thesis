@@ -4,7 +4,9 @@
   gather_facts: true
   become: true
   roles:
-    - role: preparation
+    - role: disable_swap
+    - role: packages
+    - role: install_kube
 
 - name: Setup K8S Master
   hosts: master
@@ -12,6 +14,7 @@
   roles:
     - role: master
     - role: calico
+    - role: metalLB
 
 - name: Setup K8S Workers
   hosts: worker

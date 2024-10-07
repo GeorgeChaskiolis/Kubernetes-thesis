@@ -1,0 +1,58 @@
+---
+# tasks file for install_kube
+# - name: Ensure the keyrings directory exists
+#   file:
+#     path: /etc/apt/keyrings
+#     state: directory
+#     mode: '0755'
+
+# - name: Ensure the sources.list.d directory exists
+#   file:
+#     path: /etc/apt/sources.list.d
+#     state: directory
+#     mode: '0755'
+
+# - name: Get K8s keyring
+#   command: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key -o /tmp/release.key
+
+# - name: Convert keyring with gpg
+#   command: sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /tmp/release.key
+
+# - name: Add keyring to kubernetes.list
+#   command: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+- name: Add k8s keyring
+  shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    sudo apt update
+
+# - name: Update APT package index
+#   become: yes
+#   apt:
+#     update_cache: yes
+
+- name: Install kubelet, kubeadm, kubectl
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: true
+
+- name: stop kubelet, kubeadm, kubectl
+  become: yes
+  command: sudo apt-mark hold kubelet kubeadm kubectl
+
+
+- name: Configure node ip
+  lineinfile:
+    path: /etc/default/kubelet
+    line: KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}
+
+# - name: Restart kubelet
+#   service:
+#     name: kubelet
+#     daemon_reload: yes
+#     state: restarted

@@ -1,0 +1,4 @@
+---
+# handlers file for packages
+- name: docker status
+  service: name=docker state=started

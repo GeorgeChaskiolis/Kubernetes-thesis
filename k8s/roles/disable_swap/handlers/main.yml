@@ -1,0 +1,4 @@
+---
+# handlers file for disable_swap
+- name: docker status
+  service: name=docker state=started

@@ -1,82 +1,50 @@
-- name: Ensure the /etc/kubernetes directory exists
-  file:
-    path: /etc/kubernetes
-    state: directory
-    mode: '0755'
-
-- name: Copy kubeadm-config.yaml template to /etc/kubernetes
-  template:
-    src: kubeadm-config.yaml.j2
-    dest: /etc/kubernetes/kubeadm-config.yaml
-    mode: '0644'
-
-- name: Init cluster
-  command: kubeadm init --pod-network-cidr={{ cluster_cidr }} --service-cidr={{ service_cidr }} --node-name k8s-control
-  register: kubeadm_init_output
-
-- name: Print kubeadm init output
-  debug:
-    var: kubeadm_init_output.stdout
-    
-- name: Generate and store Kubernetes join command
+---
+# tasks file for master
+- name: Initialize the Kubernetes cluster using kubeadm
   become: yes
+  shell: sudo kubeadm init --apiserver-advertise-address="{{ node_ip  }}" --apiserver-cert-extra-sans="{{ node_ip  }}" --control-plane-endpoint="{{ node_ip }}" --pod-network-cidr=192.168.0.0/16
+  # args:
+  #   chdir: ~{{ ansible_user }}
+  #   creates: cluster_initialized.txt
+  register: kubeadm_init
+
+- name: Initialize the Kubernetes cluster using kubeadm result
+  ansible.builtin.debug:
+    var: kubeadm_init
+
+- name: Setup kubeconfig for ansible user
+  shell: |
+    mkdir -p $HOME/.kube
+    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+- name: export KUBECONFIG
+  command: export KUBECONFIG=/etc/kubernetes/admin.conf
+
+- name: Get join command
   block:
-    - name: Generate join token
-      shell: kubeadm token create --print-join-command
-      register: kubeadm_join_cmd
+    - name: Generate join command
+      command: kubeadm token create --print-join-command
+      register: join_command
 
-    - name: Set join command as a fact
-      set_fact:
-        kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
-
-    - name: Show join command
-      debug: var=kubeadm_join
-
-    - name: Ensure the directory for kubeadm join command exists on the remote
+    - name: Ensure /tmp/k8s directory exists on localhost
+      delegate_to: localhost
       file:
-        path: /etc/kubernetes
+        path: /tmp/k8s
         state: directory
         mode: '0755'
 
-    - name: Store join command on the remote
+    - name: Save join command to file on localhost
+      delegate_to: localhost
       copy:
-        content: "{{ kubeadm_join }}"
-        dest: /etc/kubernetes/kubeadm-join.command
-        mode: '0644'
-
-    - name: Ensure the directory for kubeadm join command exists on the local machine
-      file:
-        path: "tmp/kubernetes"
-        state: directory
+        content: "{{ join_command.stdout_lines[0] }}"
+        dest: /tmp/k8s/join_command.sh
         mode: '0755'
+    
+    - name: Debug join command
+      debug:
+        msg: "Join command: {{ join_command.stdout_lines[0] }}"
 
-    - name: Fetch join command from master to local machine
-      fetch:
-        src: /etc/kubernetes/kubeadm-join.command
-        dest: "tmp/kubernetes/kubeadm-join.command"
-        flat: yes
-
-
-
-# - name: Setup MEtallb
-#   block:
-#   - name: Apply default Metallb naemspace
-#     ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.4/config/manifests/metallb-native.yaml
-#   - name: Copy configmap
-#     ansible.builtin.template:
-#       src: "metallb_configmap.yaml.j2"
-#       dest: "{{ systemd_dir }}/metallb_configmap.yaml"
-#       owner: root
-#       group: root
-#       mode: 0644
-#   - name: Copy service
-#     ansible.builtin.template:
-#       src: "metallb_service.yaml.j2"
-#       dest: "{{ systemd_dir }}/metallb_service.yaml"
-#       owner: root
-#       group: root
-#       mode: 0644
-#   - name: Apply configmap
-#     ansible.builtin.command: kubectl apply -f {{ systemd_dir }}/metallb_configmap.yaml
-#   - name: Apply service
-#     ansible.builtin.command: kubectl apply -f {{ systemd_dir }}/metallb_service.yaml
+    - name: Debug Complete Output
+      debug:
+        msg: "{{ join_command.stdout_lines }}"

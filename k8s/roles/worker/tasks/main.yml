@@ -1,15 +1,29 @@
 ---
-- name: Copy join command from Ansiblehost to the worker nodes.
-  become: yes
-  copy:
-    src: /etc/kubernetes/kubeadm-join.command
-    dest: /tmp/kubernetes_join_command
-    mode: 0777
+# tasks file for worker
+- name: Join Cluster
+  block:
+    - name: Ensure /tmp/k8s directory exists on worker
+      file:
+        path: /tmp/k8s
+        state: directory
+        mode: '0755'
 
-- name: Join the Worker node to the cluster (vanilla).
-  become: yes
-  command: sh /tmp/kubernetes_join_command
-  register: join_output
+    - name: Copy join command from localhost to worker
+      copy:
+        src: /tmp/k8s/join_command.sh
+        dest: /tmp/k8s/join_command.sh
+        mode: '0755'
 
-- name: Show the output of cluster join task
-  debug: var=join_output
+    - name: Ensure correct shebang line
+      lineinfile:
+        path: /tmp/k8s/join_command.sh
+        line: "#!/bin/sh"
+        insertafter: BOF
+
+    - name: Execute join command on worker
+      command: /tmp/k8s/join_command.sh
+      register: worker_output
+
+    - name: Debug Complete Output
+      debug:
+      msg: "{{ worker_output.stdout_lines }}"

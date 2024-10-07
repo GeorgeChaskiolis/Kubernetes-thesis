@@ -1,3 +1,2 @@
 ---
-systemd_dir: "/etc/systemd/system"
-api_port: 6443
+# defaults file for worker
