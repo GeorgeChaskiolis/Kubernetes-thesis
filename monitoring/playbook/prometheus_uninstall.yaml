@@ -1,0 +1,15 @@
+- name: Remove node exporter
+  hosts: all
+  become: true
+
+  vars:
+    prometheus_node_exporter_enabled_collectors:
+      - logind
+    prometheus_node_exporter_disabled_collectors:
+      - netstat
+
+  roles:
+    - role: node_exporter_remove
+
+  tags:
+    - node-exporter
