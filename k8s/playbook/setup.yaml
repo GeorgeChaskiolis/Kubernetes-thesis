@@ -13,11 +13,20 @@
   become: true
   roles:
     - role: master
+
+- name: Setup Calico
+  hosts: master
+  roles:
     - role: calico
-    - role: metalLB
 
 - name: Setup K8S Workers
   hosts: worker
   become: true
   roles:
     - role: worker
+
+- name: Label nodes as Workers
+  hosts: master
+  roles:
+    - role: label_workers
+    - role: metalLB

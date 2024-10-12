@@ -57,6 +57,10 @@
     name: "{{ packages }}"
     state: present
     update_cache: yes
+  retries: 5
+  delay: 30
+  register: apt_result
+  until: apt_result is succeeded
   vars:
     packages:
     - apt-transport-https

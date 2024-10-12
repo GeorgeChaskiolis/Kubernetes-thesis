@@ -26,4 +26,24 @@
 
     - name: Debug Complete Output
       debug:
-      msg: "{{ worker_output.stdout_lines }}"
+        var: worker_output
+
+- name: Set Kubelet internal IP to match host IP
+  lineinfile:
+    path: /etc/systemd/system/kubelet.service.d/10-kubelet.conf
+    regexp: '^KUBELET_EXTRA_ARGS='
+    line: "KUBELET_EXTRA_ARGS='--node-ip={{ ansible_default_ipv4.address }}'"
+    create: yes
+
+- name: Set Kubelet internal IP to match host IP
+  lineinfile:
+    path: /etc/default/kubelet
+    regexp: '^KUBELET_EXTRA_ARGS='
+    line: "KUBELET_EXTRA_ARGS='--node-ip={{ ansible_default_ipv4.address }}'"
+    create: yes
+
+- name: Reload daemon
+  command: sudo systemctl daemon-reload
+
+- name: Restart kubelet
+  command: sudo systemctl restart kubelet

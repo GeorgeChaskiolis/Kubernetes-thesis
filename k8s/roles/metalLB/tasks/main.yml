@@ -1,5 +1,13 @@
 ---
 # tasks file for metalLB
+- name: Wait for all pods to be ready
+  shell: kubectl wait --for=condition=ready pod --all --all-namespaces
+  register: result
+  until: result is succeeded
+  retries: 60 
+  delay: 5
+  ignore_errors: true
+  
 - name: Install and start metalLB
   block:
   - name: Ensure the metalLB manifests directory exists
@@ -21,7 +29,7 @@
 
   - name: Download metalLB Operator
     get_url:
-      url: "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-frr.yaml"
+      url: "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml"
       dest: "{{ ansible_env.HOME }}/manifests/metalLB/metallb.yaml"
       mode: '0755'
 

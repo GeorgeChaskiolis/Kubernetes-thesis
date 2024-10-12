@@ -3,23 +3,31 @@
 - name: Initialize the Kubernetes cluster using kubeadm
   become: yes
   shell: sudo kubeadm init --apiserver-advertise-address="{{ node_ip  }}" --apiserver-cert-extra-sans="{{ node_ip  }}" --control-plane-endpoint="{{ node_ip }}" --pod-network-cidr=192.168.0.0/16
-  # args:
-  #   chdir: ~{{ ansible_user }}
-  #   creates: cluster_initialized.txt
   register: kubeadm_init
 
 - name: Initialize the Kubernetes cluster using kubeadm result
   ansible.builtin.debug:
     var: kubeadm_init
 
-- name: Setup kubeconfig for ansible user
-  shell: |
-    mkdir -p $HOME/.kube
-    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+- name: Create .kube directory
+  file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: '0755'
 
-- name: export KUBECONFIG
-  command: export KUBECONFIG=/etc/kubernetes/admin.conf
+- name: Copy admin.conf to .kube config
+  command: "cp -i /etc/kubernetes/admin.conf /home/{{ ansible_user }}/.kube/config"
+  become: true
+
+- name: Set ownership for kube config
+  file:
+    path: "/home/{{ ansible_user }}/.kube/config"
+    owner: "{{ ansible_user }}"
+    group: "users"
+    mode: '0644'
+  become: true
+
 
 - name: Get join command
   block:
@@ -44,7 +52,3 @@
     - name: Debug join command
       debug:
         msg: "Join command: {{ join_command.stdout_lines[0] }}"
-
-    - name: Debug Complete Output
-      debug:
-        msg: "{{ join_command.stdout_lines }}"

@@ -31,5 +31,5 @@ all:
     api_endpoint: "{{ hostvars[groups['master'][0]]['ansible_host'] | default(groups['master'][0]) }}"
     ansible_sudo_pass: "root1234"
     node_ip: "{{ hostvars[groups['master'][0]]['ansible_default_ipv4']['address'] }}"
-    k8s_version: "1.30"
+    kubernetes_version: "1.30.5-1.1"
 
