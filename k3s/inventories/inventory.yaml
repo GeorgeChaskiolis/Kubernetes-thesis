@@ -8,16 +8,22 @@ all:
               ansible_host: 192.168.100.5
               ansible_user: george
               ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_become_pass: "root1234"
+              ansible_ssh_pass: "root1234"
         agent:
           hosts:
             worker1.test.com:
               ansible_host: 192.168.100.6
               ansible_user: george
               ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_become_pass: "root1234"
+              ansible_ssh_pass: "root1234"
             worker2.test.com:
               ansible_host: 192.168.100.7
               ansible_user: george
               ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_become_pass: "root1234"
+              ansible_ssh_pass: "root1234"
       vars:
         api_port: 6443
         k3s_version: v1.29.2+k3s1
