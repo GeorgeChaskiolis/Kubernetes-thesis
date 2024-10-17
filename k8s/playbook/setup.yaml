@@ -30,3 +30,10 @@
   roles:
     - role: label_workers
     - role: metalLB
+    - role: kube_scheduler_permissions
+
+- name: Clean Cache
+  hosts: all
+  become: true
+  roles:
+    - role: clean_cashe
