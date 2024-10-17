@@ -1,0 +1,119 @@
+---
+# tasks file for setup_scripts
+- name: Install git
+  ansible.builtin.package:
+    name: git
+    state: present
+  register: git_install_result
+
+- name: Log git installation result
+  ansible.builtin.debug:
+    msg: "Git installation result: {{ git_install_result }}"
+
+- name: Check if "scripts" directory exists
+  ansible.builtin.stat:
+    path: "{{ scripts_directory }}"
+  register: scripts_directory_stat
+
+- name: Log scripts directory status
+  ansible.builtin.debug:
+    msg: "Scripts directory status: {{ scripts_directory_stat }}"
+
+- name: Remove all files in "scripts" directory if it exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_fileglob:
+    - "{{ scripts_directory }}/*"
+  when: scripts_directory_stat.stat.exists
+
+- name: Log scripts directory content removal
+  ansible.builtin.debug:
+    msg: "Removed all contents of scripts directory: {{ scripts_directory }}"
+  when: scripts_directory_stat.stat.exists
+
+- name: Create empty "scripts" directory in /home
+  ansible.builtin.file:
+    path: "{{ scripts_directory }}"
+    state: directory
+    owner: "{{ scripts_owner }}"
+    mode: "{{ scripts_mode }}"
+  register: create_directory_result
+
+- name: Log scripts directory creation result
+  ansible.builtin.debug:
+    msg: "Scripts directory creation result: {{ create_directory_result }}"
+
+- name: Copy files from "files" folder of the role to "scripts" directory
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/"
+    dest: "{{ scripts_directory }}/"
+    owner: "{{ scripts_owner }}"
+    mode: '0644'
+    remote_src: no
+  register: copy_files_result
+
+- name: Log copy files result
+  ansible.builtin.debug:
+    msg: "Copy files result: {{ copy_files_result }}"
+
+- name: Copy kube-burner installation script to scripts directory
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      
+      # Download kube-burner
+      curl -LO https://github.com/kube-burner/kube-burner/releases/download/v1.10.5/kube-burner-V1.10.5-linux-x86_64.tar.gz
+      
+      # Extract the tar file
+      tar -xzf kube-burner-V1.10.5-linux-x86_64.tar.gz
+      
+      # Move the binary to /usr/local/bin
+      sudo mv kube-burner /usr/local/bin/
+      
+      # Make it executable
+      chmod +x /usr/local/bin/kube-burner
+      
+      # Clone kube-burner repository
+      git clone https://github.com/gkoukis/kube-burner.git
+    dest: "{{ scripts_directory }}/install_kube_burner.sh"
+    mode: '0755'
+  register: copy_script_result
+
+- name: Log kube-burner script copy result
+  ansible.builtin.debug:
+    msg: "Kube-burner script copy result: {{ copy_script_result }}"
+
+- name: Execute kube-burner installation script
+  ansible.builtin.command: "{{ scripts_directory }}/install_kube_burner.sh"
+  args:
+    chdir: "{{ scripts_directory }}"
+  register: execute_script_result
+
+- name: Log script execution result
+  ansible.builtin.debug:
+    msg: "Kube-burner installation script execution result: {{ execute_script_result }}"
+
+- name: Clone k8s-bench-suite repository to scripts directory
+  ansible.builtin.git:
+    repo: https://github.com/InfraBuilder/k8s-bench-suite.git
+    dest: "{{ scripts_directory }}/k8s-bench-suite"
+    version: master
+  register: clone_repo_result
+
+- name: Log clone k8s-bench-suite repository result
+  ansible.builtin.debug:
+    msg: "Clone k8s-bench-suite repository result: {{ clone_repo_result }}"
+
+- name: Make all files in "scripts" directory executable
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: file
+    mode: '0755'
+  with_fileglob:
+    - "{{ scripts_directory }}/*"
+  register: make_executable_result
+
+- name: Log make executable result
+  ansible.builtin.debug:
+    msg: "Make executable result: {{ make_executable_result }}"

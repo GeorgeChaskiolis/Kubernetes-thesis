@@ -1,0 +1,5 @@
+---
+# vars file for setup_scripts
+scripts_directory: /home/{{ ansible_user }}/scripts
+scripts_owner: "{{ ansible_user }}"
+scripts_mode: '0755'
