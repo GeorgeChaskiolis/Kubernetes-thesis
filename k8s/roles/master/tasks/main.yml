@@ -3,6 +3,7 @@
 - name: Initialize the Kubernetes cluster using kubeadm
   become: yes
   shell: sudo kubeadm init --apiserver-advertise-address="{{ node_ip  }}" --apiserver-cert-extra-sans="{{ node_ip  }}" --control-plane-endpoint="{{ node_ip }}" --pod-network-cidr=192.168.0.0/16
+  # shell: sudo kubeadm init --apiserver-advertise-address="{{ node_ip  }}" --apiserver-cert-extra-sans="{{ node_ip  }}" --control-plane-endpoint="{{ node_ip }}" --pod-network-cidr=192.168.0.0/16 --node-name="{{ inventory_hostname }}"
   register: kubeadm_init
 
 - name: Initialize the Kubernetes cluster using kubeadm result
