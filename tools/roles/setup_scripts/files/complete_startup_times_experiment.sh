@@ -3,12 +3,12 @@
 # Function to display usage
 usage() {
   echo "Usage: $0 <plugin> <num_iterations> <sleep_between_iterations> <num_pods_values>"
-  echo "Example: $0 flannel 5 10 '1 10 20 30'"
+  echo "Example: $0 calico 5 10 '1 10 20 30'"
   echo "If no arguments are provided, default values will be used."
 }
  
 # Set default values
-default_plugin="flannel"
+default_plugin="calico"
 default_num_iterations=2
 default_sleep_between_iterations=30
 default_num_pods_values="1 10 20"
@@ -55,8 +55,8 @@ spec:
   containers:
   - name: pause
     image: k8s.gcr.io/pause:3.1
-#  nodeSelector:
-#    kubernetes.io/hostname: athw2
+  nodeSelector:
+    kubernetes.io/hostname: worker2.test.com
 EOF
       start_times[$i]=$(date +%s%3N)
     done
