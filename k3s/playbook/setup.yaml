@@ -19,10 +19,7 @@
   roles:
     - role: worker
 
-# - name: Setup Prometheus
-#   hosts: server
-#   become: true
-#   roles:
-#     - role: vault-load-config
-#     - role: ansible-kubernetes-modules
-#     - role: prometheus-operator
+- name: Label nodes as Workers
+  hosts: server
+  roles:
+    - { role: label_workers, tags: 'label' }

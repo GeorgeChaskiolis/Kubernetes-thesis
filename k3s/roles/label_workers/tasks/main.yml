@@ -1,0 +1,7 @@
+---
+# tasks file for label_workers
+- name: Assign label to worker nodes
+  command: kubectl label node {{ worker_node_name }} node-role.kubernetes.io/worker=
+  loop: "{{ groups['agent'] }}"
+  vars:
+    worker_node_name: "{{ hostvars[item].inventory_hostname }}"
