@@ -1,7 +1,0 @@
----
-- name: Install Tools
-  hosts: master
-  gather_facts: true
-  # become: true
-  roles:
-    - role: setup_scripts
