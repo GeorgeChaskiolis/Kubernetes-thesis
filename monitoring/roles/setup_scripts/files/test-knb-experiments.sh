@@ -4,7 +4,7 @@
 iterations=10
  
 # Delay between iterations in seconds
-delay=60
+delay=600
  
 # Base filename for results
 base_filename="k8s-calico-net-results"
