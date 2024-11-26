@@ -1,5 +1,26 @@
 ---
 # tasks file for setup_scripts
+- block:
+  - name: Update apt cache
+    become: true
+    apt:
+      update_cache: yes
+
+  - name: Install curl
+    become: true
+    apt:
+      name: curl
+      state: present
+    retries: 5
+    delay: 30
+    register: apt_result
+    until: apt_result is succeeded
+  rescue:
+    - name: Fail task if unable to install curl
+      fail:
+        msg: "Failed to install curl after multiple attempts."
+
+
 - name: Install git
   become: true
   ansible.builtin.package:

@@ -7,13 +7,17 @@
 #     creates: /etc/systemd/system/k0scontroller.service
 #   changed_when: install_initial_controller_cmd | length > 0
 
+- name: Assign label to worker nodes
+  command: sudo hostnamectl set-hostname {{ inventory_hostname }}
+  become: yes
+
 - name: install k0s master node with calico network fabric
   become: true
   shell: |
           curl -sSLf https://get.k0s.sh | sudo sh
           k0s default-config > /tmp/k0s.yaml
           sed -i 's/provider: .*/provider: calico/' /tmp/k0s.yaml
-          k0s install controller -c /tmp/k0s.yaml
+          k0s install controller --enable-worker -c /tmp/k0s.yaml
           systemctl start k0scontroller
 
 - name: Setup custom environment variables for systemd unit
@@ -98,10 +102,10 @@
   debug:
     msg: "To use Cluster: export KUBECONFIG={{ artifacts_dir }}/k0s-kubeconfig.yml"
 
-- name: Wait for all pods to be ready
-  shell: k0s kubectl wait --for=condition=ready pod --all --all-namespaces
-  register: result
-  until: result is succeeded
-  retries: 60 
-  delay: 5
-  ignore_errors: true
+# - name: Wait for all pods to be ready
+#   shell: k0s kubectl wait --for=condition=ready pod --all --all-namespaces
+#   register: result
+#   until: result is succeeded
+#   retries: 60 
+#   delay: 5
+#   ignore_errors: true

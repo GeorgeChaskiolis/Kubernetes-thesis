@@ -1,7 +1,0 @@
----
-
-- hosts: initial_controller:controller:worker
-  gather_facts: yes
-  become: yes
-  roles:
-    - role: reset

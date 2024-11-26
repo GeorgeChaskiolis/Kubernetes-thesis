@@ -1,6 +1,6 @@
 ---
 
-- hosts: all
+- hosts: initial_controller:worker
   name: Download k0s on all nodes
   become: yes
   roles:
@@ -39,3 +39,25 @@
   name: Configure metallb on initial controller
   roles:
     - role: metalLB
+
+- name: Label nodes as Workers
+  hosts: initial_controller
+  roles:
+    - role: alias
+      tags: alias
+    - role: label_workers
+      tags: label_workers
+
+- hosts: initial_controller
+  gather_facts: yes
+  become: yes
+  name: Setup kube-scheduler permissions
+  roles:
+    - role: kube_scheduler_permissions
+
+- name: Clean Cache
+  hosts: initial_controller:worker
+  become: true
+  roles:
+    - role: clean_cashe
+      tags: clean_cashe
