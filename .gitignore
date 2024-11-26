@@ -1,2 +1,5 @@
 metrics/
 *.txt
+.ansible_facts_cache/
+artifacts/
+distros/
