@@ -1,0 +1,14 @@
+---
+# tasks file for kube_scheduler_permissions
+- name: Patch kube-scheduler cluster role to add permissions for configmaps
+  ansible.builtin.command:
+    cmd: >
+      kubectl patch clusterrole system:kube-scheduler
+      --type='json'
+      -p='[{"op": "add", "path": "/rules/-", "value": {"apiGroups": [""], "resources": ["configmaps"], "verbs": ["get", "list", "watch"]}}]'
+  register: patch_result
+
+- name: Ensure patch was applied successfully
+  ansible.builtin.debug:
+    msg: "Patch applied successfully: {{ patch_result.stdout }}"
+  when: patch_result.rc == 0

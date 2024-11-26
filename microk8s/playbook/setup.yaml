@@ -30,3 +30,25 @@
   become: true
   roles:
     - role: workers
+
+- name: Label nodes as Workers
+  hosts: server
+  roles:
+    - role: alias
+      tags: alias
+    - role: label_workers
+      tags: label_workers
+
+- hosts: server
+  gather_facts: yes
+  become: yes
+  name: Setup kube-scheduler permissions
+  roles:
+    - role: kube_scheduler_permissions
+
+- name: Clean Cache
+  hosts: all
+  become: true
+  roles:
+    - role: clean_cashe
+      tags: clean_cashe

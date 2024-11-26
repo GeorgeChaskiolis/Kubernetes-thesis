@@ -1,0 +1,4 @@
+---
+# tasks file for clean_cashe
+- name: Clean Cache (for RAM)
+  shell: sudo sh -c "sync; echo 1 > /proc/sys/vm/drop_caches"

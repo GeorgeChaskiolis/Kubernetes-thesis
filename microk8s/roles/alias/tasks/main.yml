@@ -1,0 +1,15 @@
+---
+# tasks file for alias
+- name: Ensure /usr/local/bin exists
+  file:
+    path: /usr/local/bin
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Create a symbolic link for kubectl pointing to microk8s kubectl
+  file:
+    src: /snap/bin/microk8s.kubectl
+    dest: /usr/local/bin/kubectl
+    state: link
+  become: yes
