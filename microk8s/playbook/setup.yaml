@@ -5,6 +5,7 @@
   become: true
   roles:
     - role: install_microk8s
+      tags: install
 
 - name: Configure groups
   hosts: k3s_cluster
@@ -34,17 +35,23 @@
 - name: Label nodes as Workers
   hosts: server
   roles:
-    - role: alias
-      tags: alias
+    # - role: alias
+    #   tags: alias
     - role: label_workers
       tags: label_workers
 
-- hosts: server
-  gather_facts: yes
-  become: yes
-  name: Setup kube-scheduler permissions
+- name: Assign the correct role to the master node
+  hosts: server
   roles:
-    - role: kube_scheduler_permissions
+    - label_master_node
+    - tags: label_master
+
+# - hosts: server
+#   gather_facts: yes
+#   become: yes
+#   name: Setup kube-scheduler permissions
+#   roles:
+#     - role: kube_scheduler_permissions
 
 - name: Clean Cache
   hosts: all

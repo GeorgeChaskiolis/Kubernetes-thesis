@@ -1,0 +1,5 @@
+---
+# tasks file for label_master_node
+- name: Label the master node
+  command: kubectl label node master node-role.kubernetes.io/master=
+  become: yes

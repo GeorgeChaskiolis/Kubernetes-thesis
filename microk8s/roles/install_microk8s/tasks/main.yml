@@ -72,23 +72,23 @@
   register: command_result
   changed_when: "'0 added, 0 removed' not in command_result.stdout"
 
-# - name: Stop microk8s
-#   become: yes
-#   command: "microk8s stop"
+- name: Stop microk8s
+  become: yes
+  command: "microk8s stop"
 
-# - name: Set node IP in kubelet args
-#   become: yes
-#   lineinfile:
-#     path: /var/snap/microk8s/current/args/kubelet
-#     line: "--node-ip={{ hostvars[inventory_hostname]['ansible_host'] }}"
-#     state: present
+- name: Set node IP in kubelet args
+  become: yes
+  lineinfile:
+    path: /var/snap/microk8s/current/args/kubelet
+    line: "--node-ip={{ hostvars[inventory_hostname]['ansible_host'] }}"
+    state: present
 
-# - name: Set advertise address in kube-apiserver args
-#   become: yes
-#   lineinfile:
-#     path: /var/snap/microk8s/current/args/kube-apiserver
-#     line: "--advertise-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
-#     state: present
+- name: Set advertise address in kube-apiserver args
+  become: yes
+  lineinfile:
+    path: /var/snap/microk8s/current/args/kube-apiserver
+    line: "--advertise-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
+    state: present
 
 # - name: Set bind address in kube-apiserver args
 #   become: yes
@@ -118,24 +118,22 @@
 #     line: "--bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
 #     state: present
 
-# - name: Restart microk8s
-#   become: yes
-#   command: "sudo snap start microk8s"
+- name: Restart microk8s
+  become: yes
+  command: "sudo snap start microk8s"
 
-# - name: Wait for microk8s to be ready
-#   become: yes
-#   command: "{{ microk8s_bin_path }}microk8s.status --wait-ready"
-#   changed_when: false
-#   register: mk8sstatusout
+- name: Debug added lines
+  debug:
+    msg: 
+      - "Node IP in kubelet: --node-ip={{ hostvars[inventory_hostname]['ansible_host'] }}"
+      - "Advertise address in kube-apiserver: --advertise-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
+      - "Bind address in kube-apiserver: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
+      - "Bind address in kube-controller-manager: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
+      - "Bind address in kube-scheduler: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
+      - "Bind address in kube-proxy: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
 
-# - name: Debug added lines
-#   debug:
-#     msg: 
-#       - "Node IP in kubelet: --node-ip={{ hostvars[inventory_hostname]['ansible_host'] }}"
-#       - "Advertise address in kube-apiserver: --advertise-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
-#       - "Bind address in kube-apiserver: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
-#       - "Bind address in kube-controller-manager: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
-#       - "Bind address in kube-scheduler: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
-#       - "Bind address in kube-proxy: --bind-address={{ hostvars[inventory_hostname]['ansible_host'] }}"
-
-
+- name: Wait for microk8s to be ready
+  become: yes
+  command: "{{ microk8s_bin_path }}microk8s.status --wait-ready"
+  changed_when: false
+  register: mk8sstatusout
