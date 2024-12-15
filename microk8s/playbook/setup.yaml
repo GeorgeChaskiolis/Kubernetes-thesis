@@ -43,8 +43,8 @@
 - name: Assign the correct role to the master node
   hosts: server
   roles:
-    - label_master_node
-    - tags: label_master
+    - role: label_master_node
+      tags: label_master
 
 # - hosts: server
 #   gather_facts: yes
