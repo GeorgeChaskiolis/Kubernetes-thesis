@@ -4,6 +4,27 @@
 #   ansible.builtin.apt:
 #     name: policycoreutils  # Used by install script to restore SELinux context
 #     update_cache: true
+
+- block:
+  - name: Update apt cache
+    become: true
+    apt:
+      update_cache: yes
+
+  - name: Install curl
+    become: true
+    apt:
+      name: curl
+      state: present
+    retries: 5
+    delay: 30
+    register: apt_result
+    until: apt_result is succeeded
+  rescue:
+    - name: Fail task if unable to install curl
+      fail:
+        msg: "Failed to install curl after multiple attempts."
+
 - name: Reset ufw and allow everything
   community.general.ufw:
     state: reset
@@ -99,8 +120,3 @@
         dest: "/etc/rancher/k3s/server/manifests"
         mode: 0600
       loop: "{{ extra_manifests }}"
-
-- name: Install curl
-  apt:
-    name: curl
-    state: present

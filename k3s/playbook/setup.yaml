@@ -23,3 +23,14 @@
   hosts: server
   roles:
     - { role: label_workers, tags: 'label' }
+
+- name: Kube Scheduler Permissions
+  hosts: server
+  roles:
+    - role: kube_scheduler_permissions
+
+- name: Clean Cache
+  hosts: all
+  become: true
+  roles:
+    - role: clean_cashe

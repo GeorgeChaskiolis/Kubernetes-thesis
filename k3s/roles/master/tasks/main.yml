@@ -13,6 +13,26 @@
 # We should be downloading and installing the newer version only if we are in one of the following cases :
 #   - we couldn't get k3s installed version in the first task of this role
 #   - the installed version of K3s on the nodes is older than the requested version in ansible vars
+# - name: Download artefact only if needed
+#   block:
+#     - name: Download K3s install script
+#       ansible.builtin.get_url:
+#         url: https://get.k3s.io/
+#         timeout: 120
+#         dest: /usr/local/bin/k3s-install.sh
+#         owner: root
+#         group: root
+#         mode: 0755
+#         force: no
+
+#     - name: Download K3s binary
+#       ansible.builtin.command:
+#         cmd: /usr/local/bin/k3s-install.sh --flannel-backend none --disable-network-policy --disable traefik
+#       environment:
+#         INSTALL_K3S_SKIP_START: "true"
+#         INSTALL_K3S_VERSION: "{{ k3s_version }}"
+#       changed_when: true
+
 - name: Download artefact only if needed
   block:
     - name: Download K3s install script
@@ -27,11 +47,20 @@
 
     - name: Download K3s binary
       ansible.builtin.command:
-        cmd: /usr/local/bin/k3s-install.sh --flannel-backend none --disable-network-policy --disable traefik
+        cmd: >
+          /usr/local/bin/k3s-install.sh
+          --flannel-backend none
+          --disable-network-policy
+          --disable traefik
+          --cluster-cidr=192.168.101.0/24
+          --service-cidr=192.168.100.0/24
+          --node-ip=192.168.100.5
       environment:
         INSTALL_K3S_SKIP_START: "true"
         INSTALL_K3S_VERSION: "{{ k3s_version }}"
       changed_when: true
+
+
 
 - name: Add K3s autocomplete to user bashrc
   ansible.builtin.lineinfile:
@@ -211,6 +240,35 @@
         regexp: '\.\s+<\(kubectl completion bash\)'
         line: ". <(kubectl completion bash)  # Added by k3s-ansible"
 
+# - name: Get join command
+#   block:
+#     - name: Get the K3s join token
+#       command: cat /var/lib/rancher/k3s/server/node-token
+#       register: k3s_token
+
+#     - name: Create join command
+#       set_fact:
+#         join_command: "curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars[inventory_hostname].ansible_host }}:6443 K3S_TOKEN={{ k3s_token.stdout }} sh -"
+
+#     - name: Ensure /tmp/k3s directory exists on localhost
+#       delegate_to: localhost
+#       become: yes
+#       file:
+#         path: /tmp/k3s
+#         state: directory
+#         mode: '0755'
+
+#     - name: Save join command to file on localhost
+#       delegate_to: localhost
+#       copy:
+#         content: "{{ join_command }}"
+#         dest: /tmp/k3s/join_command.sh
+#         mode: '0755'
+    
+#     - name: Debug join command
+#       debug:
+#         msg: "Join command: {{ join_command }}"
+
 - name: Get join command
   block:
     - name: Get the K3s join token
@@ -221,8 +279,15 @@
       set_fact:
         join_command: "curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars[inventory_hostname].ansible_host }}:6443 K3S_TOKEN={{ k3s_token.stdout }} sh -"
 
+    - name: Set localhost become password
+      set_fact:
+        localhost_become_password: "your_localhost_become_password"
+
     - name: Ensure /tmp/k3s directory exists on localhost
       delegate_to: localhost
+      become: yes
+      vars:
+        ansible_become_password: "root1234"
       file:
         path: /tmp/k3s
         state: directory
@@ -230,6 +295,9 @@
 
     - name: Save join command to file on localhost
       delegate_to: localhost
+      become: yes
+      vars:
+        ansible_become_password: "root1234"
       copy:
         content: "{{ join_command }}"
         dest: /tmp/k3s/join_command.sh
