@@ -17,6 +17,9 @@ if [ "${#THREADS_LIST[@]}" -ne "${#CONNECTIONS_LIST[@]}" ] || [ "${#THREADS_LIST
   exit 1
 fi
 
+# Log the start time
+echo "Script started at: $(date)"
+
 # Deploy Nginx if not already deployed
 if ! kubectl get deployment nginx &> /dev/null; then
   echo "Nginx deployment not found. Deploying Nginx..."
@@ -24,6 +27,8 @@ if ! kubectl get deployment nginx &> /dev/null; then
   kubectl expose deployment nginx --port=80 --target-port=80 --name=nginx-service
   echo "Nginx deployment and service created. Waiting for pods to become ready..."
   kubectl wait --for=condition=available --timeout=120s deployment/nginx
+  echo "Sleeping for 60 seconds after Nginx deployment..."
+  sleep 60
 else
   echo "Nginx deployment already exists. Skipping deployment."
 fi
@@ -108,3 +113,6 @@ EOF
   echo "Waiting 30 seconds before the next iteration..."
   sleep 30
 done
+
+# Log the end time
+echo "Script ended at: $(date)"

@@ -16,6 +16,8 @@ if [ "${#CONCURRENT_USERS_LIST[@]}" -ne "${#EXPERIMENT_DURATION_LIST[@]}" ]; the
   exit 1
 fi
 
+echo "Script started at: $(date)"
+
 # Deploy Nginx if not already deployed
 if ! kubectl get deployment nginx &> /dev/null; then
   echo "Nginx deployment not found. Deploying Nginx..."
@@ -23,11 +25,11 @@ if ! kubectl get deployment nginx &> /dev/null; then
   kubectl expose deployment nginx --port=80 --target-port=80 --name=nginx-service
   echo "Nginx deployment and service created. Waiting for pods to become ready..."
   kubectl wait --for=condition=available --timeout=120s deployment/nginx
+  echo "Sleeping for 60 seconds after Nginx deployment..."
+  sleep 60s
 else
   echo "Nginx deployment already exists. Skipping deployment."
 fi
-
-sleep 60s
 
 # Trap to catch CTRL+C and clean up jobs
 function cleanup() {
@@ -115,3 +117,4 @@ EOF
 done
 
 echo "All tests completed successfully."
+echo "Script ended at: $(date)"
